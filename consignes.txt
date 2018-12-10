@@ -1,0 +1,15 @@
+Deux appli : JSON XML
+appli XML pour savoir si on veut prendre son vélo ? (tempérture, vent, pluie) afficher de manière simple les infos utiles
+geolocalisation avec IP -> coordonnées -> Météo : afficher la météo avec XSL
+
+Afficher tout les parking vélo libre sur une carte
+
+Attention : Aller chercher la météo du CLIENT et pas du SERVEUR
+
+4 API différentes
+
+!! verifier retour API : codes d'erreur !!
+Ca ne plante pas!   
+-> sur WebEtu
+
+Beau schéma avec les clients/serveur/erreur
