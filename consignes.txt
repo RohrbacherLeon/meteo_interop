@@ -13,3 +13,5 @@ Ca ne plante pas!
 -> sur WebEtu
 
 Beau schéma avec les clients/serveur/erreur
+
+ 1 function requete
