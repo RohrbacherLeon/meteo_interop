@@ -1,7 +1,4 @@
 <?php
-
-
-
 /**
  * Calls the meteo API 
  * @param localisation 
@@ -21,12 +18,10 @@ function callMeteo($localisation, $auth){
     $meteo_data = file_get_contents($url_meteo, false, $context);
     if($meteo_data){
         
-        /*$args = ['/_xml' => $xml];
-        $xsltp = xslt_create();
-        xslt_set_encoding($xsltp, 'UTF-8');
-        $html = xslt_process($xsltp, 'arg:/_xml', './meteo.xsl', null, $args);*/
+        
         $xml_file = fopen('meteo.xml', 'w');
         fwrite($xml_file, $meteo_data);
+        fclose($xml_file);
         $xml = new DOMDocument();
         $xml->load('meteo.xml');
 
@@ -36,60 +31,40 @@ function callMeteo($localisation, $auth){
         $proc->importStylesheet($xsl);
        
         $meteo = $proc->transformToXML($xml);
-
-        echo '
-        <html>
-		
-        <head>
-            <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.0/css/all.css" integrity="sha384-aOkxzJ5uQz7WBObEZcHvV5JvRW3TUc2rNPA7pe3AwnsUohiw1Vj2Rgx2KSOkF5+h" crossorigin="anonymous"/>
-        </head>
-        <body>
-            <div class="meteo>
+        return '
+            <div class="meteo">
             '.$meteo.'
             </div>
-        </body>
-		</html>
         '; 
-        die;
-        $success = true;
     } else {
-        $success = false;
-    }
-    return $success;
-}
-
-
-
-function parkings(){
-    //Call API parkings
-    $url_parkings = "http://www.velostanlib.fr/service/carto";
-    $parkings_data = simplexml_load_string(file_get_contents($url_parkings));
-
-    //les marqueurs
-    $markers = $parkings_data->markers 
-    if($parkings_data){
-        //Print parkings
-        //Call API vélo
-        $parking_id = 1;
-        $url_velos = "http://www.velostanlib.fr/service/stationdetails/nancy/$parking_id";
-        $velos_data = simplexml_load_string(file_get_contents($url_velos));
-        if($velos_data){
-            //Places libres
-            //Velos disponibles
-            var_dump($velos_data);
-        } else {
-            //Infos velos indisponibles
-            var_dump('velo indisponible');
-        } 
-    } else {
-        //Parkings indisponibles
-        var_dump('parkings indisponibles');
+        var_dump('aucune donnée meteo');die;
     }
 }
+
 
 $param_localisation = '48.67103,6.15083';
-
 $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D&_c=19f3aa7d766b6ba91191c8be71dd1ab2';
-callMeteo($param_localisation, $param_auth);
-//parkings();
+//
 
+$html = "
+<html>
+		
+    <head>
+        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.3.4/dist/leaflet.css' integrity='sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=='crossorigin=''/>
+        <link rel='stylesheet' href='assets/style.css'>
+        <link rel='stylesheet' href='https://use.fontawesome.com/releases/v5.6.1/css/all.css' integrity='sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP' crossorigin='anonymous'>
+        <script src='https://unpkg.com/leaflet@1.3.4/dist/leaflet.js' integrity='sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=='crossorigin=''></script>
+    </head>
+    <body>
+
+        <div id='mapid' style='height:100vh;'>
+            ".callMeteo($param_localisation, $param_auth)."
+        </div>
+
+        <script src='https://code.jquery.com/jquery-3.3.1.min.js'integrity='sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8='crossorigin='anonymous'></script>
+        <script src='assets/map.js'></script>
+    </body>
+    </html>
+";
+
+echo $html;
