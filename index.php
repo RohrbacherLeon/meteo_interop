@@ -1,5 +1,17 @@
 <?php
 /**
+ * Calls the meteo API
+ * 
+ *
+$default_opts = array(
+    'http'=>array(
+        'proxy'=> 'tcp://www-cache.iutnc.univ-lorraine.fr:3128/',
+        'request_fulluri'=> true
+    )
+  );
+$default = stream_context_set_default($default_opts);
+*/
+/**
  * Calls the meteo API 
  * @param localisation 
  *      Localisation of the client to insert in url
@@ -10,12 +22,10 @@
  *      False : API didn't respond
  */
 function callMeteo($localisation, $auth){
-    $opts = array('http' => array(/*'proxy'=> 'tcp://www-cache.iutnc.univ-lorraine.fr:3128/',*/'request_fulluri'=> true));
 
-    $context = stream_context_create($opts);
     $success = false;
     $url_meteo = "http://www.infoclimat.fr/public-api/gfs/xml?_ll=$localisation&_auth=$auth";
-    $meteo_data = file_get_contents($url_meteo, false, $context);
+    $meteo_data = file_get_contents($url_meteo, false);
     if($meteo_data){
         
         
@@ -52,21 +62,18 @@ function callMeteo($localisation, $auth){
 function callLocalisation($ip){
     
     $coordinates = '';
-    $opts = array('http' => array(/*'proxy'=> 'tcp://www-cache.iutnc.univ-lorraine.fr:3128/',*/'request_fulluri'=> true));
 
-    $context = stream_context_create($opts);
     $success = false;
     $url_ipapi = "https://ipapi.co/$ip/latlong/";
-    $ipapi_data = file_get_contents($url_ipapi, false, $context);
+    $ipapi_data = file_get_contents($url_ipapi, false);
     if($ipapi_data){    
         
         $coordinates = $ipapi_data;
     }
+    
     else {
     var_dump('erreur données localisation');die;
 }
-
-
     return $coordinates;
 }
 
@@ -88,8 +95,8 @@ $html = "
         <div id='mapid' style='height:100vh;'>
             ".callMeteo(callLocalisation('176.145.233.91'),$param_auth)."
         </div>
-
         <script src='https://code.jquery.com/jquery-3.3.1.min.js'integrity='sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8='crossorigin='anonymous'></script>
+
         <script src='assets/map.js'></script>
     </body>
     </html>
