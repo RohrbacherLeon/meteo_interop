@@ -41,8 +41,36 @@ function callMeteo($localisation, $auth){
     }
 }
 
+/**
+ * Calls the IP localisation API 
+ * @param ip 
+ *      IP of the client to insert in url
+ * @return 
+ *      True : xml file has been created with success
+ *      False : API didn't respond
+ */
+function callLocalisation($ip){
+    
+    $coordinates = '';
+    $opts = array('http' => array(/*'proxy'=> 'tcp://www-cache.iutnc.univ-lorraine.fr:3128/',*/'request_fulluri'=> true));
 
-$param_localisation = '48.67103,6.15083';
+    $context = stream_context_create($opts);
+    $success = false;
+    $url_ipapi = "https://ipapi.co/$ip/latlong/";
+    $ipapi_data = file_get_contents($url_ipapi, false, $context);
+    if($ipapi_data){    
+        
+        $coordinates = $ipapi_data;
+    }
+    else {
+    var_dump('erreur données localisation');die;
+}
+
+
+    return $coordinates;
+}
+
+
 $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D&_c=19f3aa7d766b6ba91191c8be71dd1ab2';
 //
 
@@ -58,7 +86,7 @@ $html = "
     <body>
 
         <div id='mapid' style='height:100vh;'>
-            ".callMeteo($param_localisation, $param_auth)."
+            ".callMeteo(callLocalisation('176.145.233.91'),$param_auth)."
         </div>
 
         <script src='https://code.jquery.com/jquery-3.3.1.min.js'integrity='sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8='crossorigin='anonymous'></script>
