@@ -12,6 +12,7 @@ $default_opts = array(
 $default = stream_context_set_default($default_opts);
 */
 
+
 /**
  * Calls the meteo API 
  * @param localisation 
@@ -23,7 +24,9 @@ $default = stream_context_set_default($default_opts);
  *      False : API didn't respond
  */
 function callMeteo($localisation, $auth){
-    $url_meteo = "http://www.infoclimat.fr/public-api/gfs/xml?_ll=$localisation&_auth=$auth";
+    $lat = $localisation[1];
+    $lng = $localisation[0];
+    $url_meteo = "http://www.infoclimat.fr/public-api/gfs/xml?_ll=$lat,$lng&_auth=$auth";
     $meteo_data = new SimpleXMLElement(file_get_contents($url_meteo, false));
     if($meteo_data){
         $xsl = new DOMDocument();
@@ -44,7 +47,7 @@ function callMeteo($localisation, $auth){
 
 function getIp(){
     $url_ip = "http://api.ipstack.com/check?access_key=1c2c31a9132584a1c622b7e1bf032084";
-$ip_data =  json_decode(file_get_contents($url_ip, false));
+    $ip_data =  json_decode(file_get_contents($url_ip, false));
     return [$ip_data->longitude, $ip_data->latitude];
 }
 
@@ -71,9 +74,6 @@ END;
     return $script;
 }
 
-
-
-$param_localisation = '48.67103,6.15083';
 $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D&_c=19f3aa7d766b6ba91191c8be71dd1ab2';
 
 $script = "
@@ -114,9 +114,8 @@ $html = "
     <body>
 
         <div id='mapid' style='height:100vh;'>
-            ".callMeteo($param_localisation, $param_auth)."
+            ".callMeteo(getIp(),$param_auth)."
         </div>
-
         <script src='https://code.jquery.com/jquery-3.3.1.min.js'integrity='sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8='crossorigin='anonymous'></script>
         <script>
         ". $script ."
