@@ -1,6 +1,6 @@
 <?php
 ini_set('display_errors', 1);
-
+error_reporting();
 /*
 $default_opts = array(
     'http'=>array(
@@ -19,9 +19,6 @@ $default = stream_context_set_default($default_opts);
  *      Localisation of the client to insert in url
  * @param auth 
  *      Authentification key to insert in url
- * @return 
- *      True : xml file has been created with success
- *      False : API didn't respond
  */
 function callMeteo($localisation, $auth){
     $coords = explode(",",$localisation);
@@ -29,7 +26,7 @@ function callMeteo($localisation, $auth){
     $lng = $coords[1];
     $url_meteo = "http://www.infoclimat.fr/public-api/gfs/xml?_ll=$lat,$lng&_auth=$auth";
     $meteo_data = new SimpleXMLElement(file_get_contents($url_meteo, false));
-    if($meteo_data){
+    if(getError($http_response_header) == 200){
         $xsl = new DOMDocument();
         $xsl->load('meteo.xsl');
         $proc = new XSLTProcessor();
@@ -46,33 +43,60 @@ function callMeteo($localisation, $auth){
     }
 }
 
-function getIp(){
+function getCoordinates(){
     //Pour web-etu : $client_ip = $_SERVER["REMOTE_ADDR"];
     $client_ip = "193.50.135.198";
     $coord = file_get_contents("https://ipapi.co/$client_ip/latlong/");
     return $coord;
 }
 
+function getError($http){
+    return intval(explode(' ',$http[0])[1]);
+}
+
 function getVelos(){
     $url_velos = "http://www.velostanlib.fr/service/carto";
     $stations =  new SimpleXMLElement(file_get_contents($url_velos));
+    $coord = getCoordinates();
+    $script = <<<EOT
+        let map = L.map('mapid',{
+            center : [$coord],
+            zoom : 17
+        });
 
-    $script = "";
-    $html = "";
-    foreach ($stations->markers->marker as $station) {
-        $infos =  new SimpleXMLElement(file_get_contents("http://www.velostanlib.fr/service/stationdetails/nancy/".$station->attributes()->number));
-        $free = json_decode($infos->free);
-        $total = json_decode($infos->total);
-        $lat = $station->attributes()->lat;
-        $lng = $station->attributes()->lng;
-        $name = substr($station->attributes()->name, 7);
-        $rgb = availabilityColor($free/$total);
-        $script .= <<<END
-        L.marker([$lat,$lng ],{
-            icon
-        }).addTo(map).bindPopup("<h2>$name</h2><p class='marker-content' style='background-color:rgb($rgb);'>Vélos disponibles :$free/$total</p>", {closeOnClick: true, autoClose: true});
+        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+            maxZoom: 25,
+            id: 'mapbox.streets',
+            accessToken: 'pk.eyJ1IjoiYW50aG9ueXppbmsiLCJhIjoiY2pwb2g2YXpkMDB6OTN4cWZvdTF3cGljZiJ9.ETkoyTeCMRTRX2SAc0TrXg'
+        }).addTo(map);
+
+        L.marker([$coord],{
+            opacity : 1
+        }).addTo(map);
+
+        let icon = L.icon({
+            iconUrl: 'assets/icon.png',
+            iconSize: [38, 38],
+        });
+EOT;
+
+    if(getError($http_response_header) == 200){
+
+        foreach ($stations->markers->marker as $station) {
+                $infos =  new SimpleXMLElement(file_get_contents("http://www.velostanlib.fr/service/stationdetails/nancy/".$station->attributes()->number));
+            $free = json_decode($infos->free);
+            $total = json_decode($infos->total);
+            $availability = availabilityColor($free/$total);
+            $lat = $station->attributes()->lat;
+            $lng = $station->attributes()->lng;
+            $name = substr($station->attributes()->name, 7);
+            $script .= <<<END
+            L.marker([$lat,$lng ],{
+                icon
+            }).addTo(map).bindPopup("<h2>$name</h2><p class='marker-content' style='background-color: rgb($availability)'>Vélos disponibles :$free/$total</p>", {closeOnClick: true, autoClose: true});
 END;
-    
+        
+        }
     }
     return $script;
 }
@@ -89,32 +113,8 @@ function availabilityColor($ratio) {
     return "$r,$g,0";
   }
 
+
 $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D&_c=19f3aa7d766b6ba91191c8be71dd1ab2';
-
-$script = "
-    let map = L.map('mapid',{
-        center : [".getIp()."],
-        zoom : 17
-    });
-
-    L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
-        attribution: \"Map data &copy; <a href='https://www.openstreetmap.org/'>OpenStreetMap</a> contributors, <a href='https://creativecommons.org/licenses/by-sa/2.0/'>CC-BY-SA</a>, Imagery © <a href='https://www.mapbox.com/'>Mapbox</a>\",
-        maxZoom: 25,
-        id: 'mapbox.streets',
-        accessToken: 'pk.eyJ1IjoiYW50aG9ueXppbmsiLCJhIjoiY2pwb2g2YXpkMDB6OTN4cWZvdTF3cGljZiJ9.ETkoyTeCMRTRX2SAc0TrXg'
-    }).addTo(map);
-
-    L.marker([".getIp()."],{
-        opacity : 1
-    }).addTo(map);
-
-    let icon = L.icon({
-        iconUrl: 'assets/icon.png',
-        iconSize: [38, 38],
-    });
-
-    ".getVelos()."
-";
 
 
 $html = "
@@ -129,11 +129,11 @@ $html = "
     <body>
 
         <div id='mapid' style='height:100vh;'>
-            ".callMeteo(getIp(),$param_auth)."
+            ".callMeteo(getCoordinates(),$param_auth)."
         </div>
         <script src='https://code.jquery.com/jquery-3.3.1.min.js'integrity='sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8='crossorigin='anonymous'></script>
         <script>
-        ". $script ."
+        ". getVelos() ."
         </script>
     </body>
     </html>
