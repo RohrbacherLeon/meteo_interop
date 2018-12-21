@@ -86,14 +86,15 @@ EOT;
                 $infos =  new SimpleXMLElement(file_get_contents("http://www.velostanlib.fr/service/stationdetails/nancy/".$station->attributes()->number));
             $free = json_decode($infos->free);
             $total = json_decode($infos->total);
-            $availability = availabilityColor($free/$total);
+            $percentage = ($free/$total*100);
+            $availability = availabilityColor($percentage);
             $lat = $station->attributes()->lat;
             $lng = $station->attributes()->lng;
             $name = substr($station->attributes()->name, 7);
             $script .= <<<END
             L.marker([$lat,$lng ],{
                 icon
-            }).addTo(map).bindPopup("<h2>$name</h2><p class='marker-content' style='background-color: rgb($availability)'>Vélos disponibles :$free/$total</p>", {closeOnClick: true, autoClose: true});
+            }).addTo(map).bindPopup("<h2>$name</h2><div class='availability_container'><div class='availability_level' style='background-color: rgb($availability); width: $percentage%'></div></div><h3>Vélos disponibles :$free/$total</h3>", {closeOnClick: true, autoClose: true});
 END;
         
         }
@@ -101,14 +102,14 @@ END;
     return $script;
 }
 
-function availabilityColor($ratio) {
-    $number = (1-$ratio)*100;
+function availabilityColor($number) {
+    $number--;
     if ($number < 50) {
-      $r = floor(255 * ($number / 50));
-      $g = 255;
-    } else {
+      $g = floor(255 * ($number / 50));
       $r = 255;
-      $g = floor(255 * ((50-$number%50) / 50));
+    } else {
+      $g = 255;
+      $r = floor(255 * ((50-$number%50) / 50));
     }
     return "$r,$g,0";
   }

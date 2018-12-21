@@ -55,7 +55,20 @@ body{
 
 .marker-content {
     font-size: 1rem;
-    height:30px;
+    padding: 10px 10px;
     border-radius: 5px;
     text-align:center;
+}
+
+.availability_container {
+    margin: 0 auto;
+    width: 200px;
+    height: 20px;
+    border: solid 2px black;
+}
+
+.availability_level {
+    height: 100%;
+    border-bottom-right-radius: 5px;
+    border-top-right-radius: 5px;
 }
