@@ -24,8 +24,9 @@ $default = stream_context_set_default($default_opts);
  *      False : API didn't respond
  */
 function callMeteo($localisation, $auth){
-    $lat = $localisation[1];
-    $lng = $localisation[0];
+    $coords = explode(",",$localisation);
+    $lat = $coords[0];
+    $lng = $coords[1];
     $url_meteo = "http://www.infoclimat.fr/public-api/gfs/xml?_ll=$lat,$lng&_auth=$auth";
     $meteo_data = new SimpleXMLElement(file_get_contents($url_meteo, false));
     if($meteo_data){
@@ -46,9 +47,10 @@ function callMeteo($localisation, $auth){
 }
 
 function getIp(){
-    $url_ip = "http://api.ipstack.com/check?access_key=1c2c31a9132584a1c622b7e1bf032084";
-    $ip_data =  json_decode(file_get_contents($url_ip, false));
-    return [$ip_data->longitude, $ip_data->latitude];
+    //Pour web-etu : $client_ip = $_SERVER["REMOTE_ADDR"];
+    $client_ip = "193.50.135.198";
+    $coord = file_get_contents("https://ipapi.co/$client_ip/latlong/");
+    return $coord;
 }
 
 function getVelos(){
@@ -91,7 +93,7 @@ $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkU
 
 $script = "
     let map = L.map('mapid',{
-        center : [".getIp()[1].", ".getIp()[0]."],
+        center : [".getIp()."],
         zoom : 17
     });
 
@@ -102,7 +104,7 @@ $script = "
         accessToken: 'pk.eyJ1IjoiYW50aG9ueXppbmsiLCJhIjoiY2pwb2g2YXpkMDB6OTN4cWZvdTF3cGljZiJ9.ETkoyTeCMRTRX2SAc0TrXg'
     }).addTo(map);
 
-    L.marker([".getIp()[1].", ".getIp()[0]."],{
+    L.marker([".getIp()."],{
         opacity : 1
     }).addTo(map);
 
