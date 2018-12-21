@@ -63,16 +63,29 @@ function getVelos(){
         $total = json_decode($infos->total);
         $lat = $station->attributes()->lat;
         $lng = $station->attributes()->lng;
-        $name = $station->attributes()->name;
+        $name = substr($station->attributes()->name, 7);
+        $rgb = availabilityColor($free/$total);
         $script .= <<<END
         L.marker([$lat,$lng ],{
             icon
-        }).addTo(map).bindPopup("<h2>$name</h2><p style='text-align:center'>Vélos disponibles :$free/$total</p>", {closeOnClick: true, autoClose: true});
+        }).addTo(map).bindPopup("<h2>$name</h2><p class='marker-content' style='background-color:rgb($rgb);'>Vélos disponibles :$free/$total</p>", {closeOnClick: true, autoClose: true});
 END;
     
     }
     return $script;
 }
+
+function availabilityColor($ratio) {
+    $number = (1-$ratio)*100;
+    if ($number < 50) {
+      $r = floor(255 * ($number / 50));
+      $g = 255;
+    } else {
+      $r = 255;
+      $g = floor(255 * ((50-$number%50) / 50));
+    }
+    return "$r,$g,0";
+  }
 
 $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D&_c=19f3aa7d766b6ba91191c8be71dd1ab2';
 
