@@ -1,7 +1,7 @@
 <?php
 ini_set('display_errors', 1);
-error_reporting();
-/*
+error_reporting(1);
+
 $default_opts = array(
     'http'=>array(
         'proxy'=> 'tcp://www-cache.iutnc.univ-lorraine.fr:3128/',
@@ -10,7 +10,27 @@ $default_opts = array(
   );
 
 $default = stream_context_set_default($default_opts);
-*/
+
+
+function parseHttpCode($http_response_header){
+    return explode(' ', $http_response_header[0])[1];
+}
+
+function callApi(string $url, string $api){
+    $results = file_get_contents($url);
+    switch(parseHttpCode($http_response_header)){
+        case "200":
+        return [true,new SimpleXMLElement($results)];
+        case '403':
+        return [false, "L'accès à l'API $api est interdit."];
+        case '404':
+        return [false, "La ressource de l'API $api est introuvable."];
+        case '500':
+        return [false, "L'API $api ne répond pas."];
+        default:
+            return [false, "Une erreur par rapport à l'API $api est survenue."];
+    }
+}
 
 
 /**
@@ -24,78 +44,76 @@ function callMeteo($localisation, $auth){
     $coords = explode(",",$localisation);
     $lat = $coords[0];
     $lng = $coords[1];
-    $url_meteo = "http://www.infoclimat.fr/public-api/gfs/xml?_ll=$lat,$lng&_auth=$auth";
-    $meteo_data = new SimpleXMLElement(file_get_contents($url_meteo, false));
-    if(getError($http_response_header) == 200){
+    $meteo_data = callApi("http://www.infoclimat.fr/public-api/gfs/xml?_ll=$lat,$lng&_auth=$auth", "Meteo");
+    if($meteo_data[0]){
         $xsl = new DOMDocument();
         $xsl->load('meteo.xsl');
         $proc = new XSLTProcessor();
         $proc->importStylesheet($xsl);
        
-        $meteo = $proc->transformToXML($meteo_data);
+        $meteo = $proc->transformToXML($meteo_data[1]);
         return '
             <div class="meteo">
             '.$meteo.'
             </div>
         '; 
     } else {
-        return "<div class='meteo'>Pas de meteo :'(</div>";
+        return "<div class='meteo'>$meteo_data[1]</div>";
     }
 }
 
 function getCoordinates(){
-    //Pour web-etu : $client_ip = $_SERVER["REMOTE_ADDR"];
-    $client_ip = "193.50.135.198";
+    $client_ip = $_SERVER["REMOTE_ADDR"];
+    //$client_ip = "193.50.135.198";
     $coord = file_get_contents("https://ipapi.co/$client_ip/latlong/");
     return $coord;
 }
 
-function getError($http){
-    return intval(explode(' ',$http[0])[1]);
-}
-
 function getVelos(){
     $url_velos = "http://www.velostanlib.fr/service/carto";
-    $stations =  new SimpleXMLElement(file_get_contents($url_velos));
-    $coord = getCoordinates();
-    $script = <<<EOT
-        let map = L.map('mapid',{
-            center : [$coord],
-            zoom : 17
-        });
+    $stations =  callApi("http://www.velostanlib.fr/service/carto", "des vélos");
 
-        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
-            maxZoom: 25,
-            id: 'mapbox.streets',
-            accessToken: 'pk.eyJ1IjoiYW50aG9ueXppbmsiLCJhIjoiY2pwb2g2YXpkMDB6OTN4cWZvdTF3cGljZiJ9.ETkoyTeCMRTRX2SAc0TrXg'
-        }).addTo(map);
-
-        L.marker([$coord],{
-            opacity : 1
-        }).addTo(map);
-
-        let icon = L.icon({
-            iconUrl: 'assets/icon.png',
-            iconSize: [38, 38],
-        });
+        $coord = getCoordinates();
+        $script = <<<EOT
+            let map = L.map('mapid',{
+                center : [$coord],
+                zoom : 17
+            });
+    
+            L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+                maxZoom: 25,
+                id: 'mapbox.streets',
+                accessToken: 'pk.eyJ1IjoiYW50aG9ueXppbmsiLCJhIjoiY2pwb2g2YXpkMDB6OTN4cWZvdTF3cGljZiJ9.ETkoyTeCMRTRX2SAc0TrXg'
+            }).addTo(map);
+    
+            L.marker([$coord],{
+                opacity : 1
+            }).addTo(map);
+    
+            let icon = L.icon({
+                iconUrl: 'assets/icon.png',
+                iconSize: [38, 38],
+            });
 EOT;
 
-    if(getError($http_response_header) == 200){
+    if($stations[0]){
 
-        foreach ($stations->markers->marker as $station) {
-                $infos =  new SimpleXMLElement(file_get_contents("http://www.velostanlib.fr/service/stationdetails/nancy/".$station->attributes()->number));
-            $free = json_decode($infos->free);
-            $total = json_decode($infos->total);
-            $percentage = ($free/$total*100);
-            $availability = availabilityColor($percentage);
-            $lat = $station->attributes()->lat;
-            $lng = $station->attributes()->lng;
-            $name = substr($station->attributes()->name, 7);
-            $script .= <<<END
-            L.marker([$lat,$lng ],{
-                icon
-            }).addTo(map).bindPopup("<h2>$name</h2><div class='availability_container'><div class='availability_level' style='background-color: rgb($availability); width: $percentage%'></div></div><h3>Vélos disponibles :$free/$total</h3>", {closeOnClick: true, autoClose: true});
+        foreach ($stations[1]->markers->marker as $station) {
+            $infos =  callApi("http://www.velostanlib.fr/service/stationdetails/nancy/".$station->attributes()->number, "des stations");
+            if($infos[0]){
+                $free = json_decode($infos[1]->free);
+                $total = json_decode($infos[1]->total);
+                $percentage = ($free/$total*100);
+                $availability = availabilityColor($percentage);
+                $lat = $station->attributes()->lat;
+                $lng = $station->attributes()->lng;
+                $name = substr($station->attributes()->name, 7);
+                $script .= <<<END
+                L.marker([$lat,$lng ],{
+                    icon
+                }).addTo(map).bindPopup("<h2>$name</h2><div class='availability_container'><div class='availability_level' style='background-color: rgb($availability); width: $percentage%'></div></div><h3>Vélos disponibles :$free/$total</h3>", {closeOnClick: true, autoClose: true});
 END;
+            }
         
         }
     }
@@ -112,11 +130,11 @@ function availabilityColor($number) {
       $r = floor(255 * ((50-$number%50) / 50));
     }
     return "$r,$g,0";
-  }
+}
+
 
 
 $param_auth = 'ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D&_c=19f3aa7d766b6ba91191c8be71dd1ab2';
-
 
 $html = "
 <html>
